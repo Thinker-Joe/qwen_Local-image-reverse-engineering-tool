@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片分析工具</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>图片智能分析工具</h1>
+            <p>拖拽图片到下方区域，点击"开始分�?按钮获取AI分析结果</p>
+        </header>
+
+        <div class="api-model-container">
+            <div class="api-key-section">
+                <label for="api-key">API密钥:</label>
+                <input type="text" id="api-key" placeholder="请输入您的API密钥" />
+                <button id="save-api-key">保存密钥</button>
+                <span id="api-key-status"></span>
+            </div>
+            <div class="model-selection-section">
+                <label for="model-select">选择模型:</label>
+                <select id="model-select">
+                    <option value="qwen-vl-max-latest">通义千问VL Max (默认)</option>
+                    <option value="qwen2.5-vl-7b-instruct">通义千问2.5 VL 7B</option>
+                    <option value="qwen2.5-vl-72b-instruct">通义千问2.5 VL 72B</option>
+                    <option value="qvq-72b-preview">QVQ 72B 预览�?/option>
+                    <option value="qwen-vl-plus">通义千问VL Plus</option>
+                </select>
+                <button id="save-model">保存选择</button>
+                <span id="model-status"></span>
+            </div>
+        </div>
+
+        <div class="prompt-container">
+            <label for="custom-prompt">自定义提�?</label>
+            <input type="text" id="custom-prompt" placeholder="Please describe the content of this image in detail in English" />
+            <span class="prompt-tip">自定义您想问AI的问题，默认�?Please describe the content of this image in detail in English"</span>
+        </div>
+
+        <div class="drop-area" id="drop-area">
+            <div class="drop-area-content">
+                <div class="empty-state-icon">
+                    <svg viewBox="0 0 24 24" width="48" height="48">
+                        <path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3zm-5.55-8h-2.9v3H8l4 4 4-4h-2.55z"/>
+                    </svg>
+                </div>
+                <h3 class="empty-state-title">拖拽图片到这�?/h3>
+                <p class="empty-state-description">支持PNG、JPEG、WEBP格式，可同时上传多张图片</p>
+                <label class="file-input-label">
+                    <input type="file" id="file-input" multiple accept="image/*" />
+                    选择图片
+                </label>
+            </div>
+        </div>
+
+        <div class="preview-container" id="preview-container">
+            <div class="preview-header">
+                <h2>已上传图�?(<span id="image-count">0</span>)</h2>
+                <div class="preview-actions">
+                    <button id="clear-all" disabled>清除所�?/button>
+                    <div class="view-controls">
+                        <button id="grid-view-btn" class="view-btn active" title="网格视图">
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z"/></svg>
+                        </button>
+                        <button id="list-view-btn" class="view-btn" title="列表视图">
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="preview-list grid-view" id="preview-list"></div>
+        </div>
+
+        <div class="controls-container">
+            <div class="controls-left">
+                <button id="start-analysis" class="rainbow-button primary-button" disabled>开始分�?/button>
+                <button id="stop-analysis" class="stop-button" disabled style="display: none;">停止分析</button>
+            </div>
+            <div class="controls-right">
+                <!-- 清除所有按钮已移至预览区域 -->
+            </div>
+        </div>
+
+        <div class="results-container" id="results-container">
+            <h2>分析结果</h2>
+            <div class="results-list" id="results-list"></div>
+            <div class="download-all-container" id="download-all-container" style="display: none;">
+                <button id="download-all" class="primary-button">下载所有结�?/button>
+            </div>
+        </div>
+
+        <div class="progress-container" id="progress-container" style="display: none;">
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="progress-text" id="progress-text">处理�? 0/0</div>
+        </div>
+    </div>
+
+    <footer>
+        <p>作者OldX B站：AI-老X</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html> 

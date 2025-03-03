@@ -1,0 +1,56 @@
+# 图片分析工具 .gitignore 文件
+
+# Python 相关
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+venv/
+env/
+.venv/
+
+# 项目特定文件
+output/             # 分析结果输出目录
+*.zip               # 打包的结果文件
+*.bak               # 备份文件
+app.py.new          # 新版本测试文件
+app.py.bak          # 备份的应用文件
+index.html.bak      # 备份的HTML文件
+css_styles.txt      # 临时CSS样式文件
+
+# 系统文件
+.DS_Store           # macOS 系统文件
+Thumbs.db           # Windows 缩略图缓存
+desktop.ini         # Windows 桌面设置
+
+# 编辑器文件
+.idea/              # JetBrains IDE 设置
+.vscode/            # VS Code 设置
+*.swp               # Vim 临时文件
+*.swo               # Vim 临时文件
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+
+# 会话数据
+sessions/
+
+# 如果有上传的图片临时存储
+uploads/
+
+# 如果使用了npm包
+node_modules/
+dist/
+build/
+
+# 本地配置文件（如果有）
+config.local.py
+api_keys.json 

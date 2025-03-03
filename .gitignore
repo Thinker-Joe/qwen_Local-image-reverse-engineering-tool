@@ -13,7 +13,10 @@ env/
 .venv/
 
 # 项目特定文件
-output/             # 分析结果输出目录
+/output/             # 分析结果输出目录
+/output
+output/
+output
 *.zip               # 打包的结果文件
 *.bak               # 备份文件
 app.py.new          # 新版本测试文件

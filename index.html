@@ -9,8 +9,25 @@
 <body>
     <div class="container">
         <header>
-            <h1>OldX图片反推工具</h1>
-            <p>拖拽图片到下方区域，点击"开始分析"按钮获取AI分析结果</p>
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>OldX图片反推工具</h1>
+                    <p>拖拽图片到下方区域，点击"开始分析"按钮获取AI分析结果</p>
+                </div>
+                <div class="header-right">
+                    <div class="donate-container">
+                        <div class="qrcode-wrapper">
+                            <div class="qrcode-item">
+                                <img src="static/qrcode2.png" alt="微信打赏码" class="donate-qr">
+                            </div>
+                            <div class="qrcode-item">
+                                <img src="static/qrcode.png" alt="支付宝打赏码" class="donate-qr">
+                            </div>
+                        </div>
+                        <p class="donate-text main-text">制作不易，打赏一下吧</p>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <div class="api-model-container">
@@ -18,7 +35,9 @@
                 <label for="api-key">API密钥:</label>
                 <input type="text" id="api-key" placeholder="请输入您的API密钥" />
                 <button id="save-api-key">保存密钥</button>
-                <span id="api-key-status"></span>
+                <div class="status-wrapper">
+                    <span id="api-key-status"></span>
+                </div>
             </div>
             <div class="model-selection-section">
                 <label for="model-select">选择模型:</label>
@@ -30,14 +49,16 @@
                     <option value="qwen-vl-plus">通义千问VL Plus</option>
                 </select>
                 <button id="save-model">保存选择</button>
-                <span id="model-status"></span>
+                <div class="status-wrapper">
+                    <span id="model-status"></span>
+                </div>
             </div>
         </div>
 
         <div class="prompt-container">
-            <label for="custom-prompt">自定义提问:</label>
+            <label for="custom-prompt">反推提示词:</label>
             <input type="text" id="custom-prompt" placeholder="Please describe the content of this image in detail in English" />
-            <span class="prompt-tip">自定义您想问AI的问题，默认为"Please describe the content of this image in detail in English"</span>
+            <span class="prompt-tip">默认为"Please describe the content of this image in detail in English"</span>
         </div>
 
         <div class="drop-area" id="drop-area">

@@ -84,8 +84,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         apiKeyInput.value = savedApiKey;
         apiKey = savedApiKey;
         apiKeyStatus.textContent = '已加载保存的密钥';
+        apiKeyStatus.classList.add('show');
         setTimeout(() => {
-            apiKeyStatus.textContent = '';
+            apiKeyStatus.classList.remove('show');
         }, 3000);
     }
     
@@ -95,8 +96,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         modelSelect.value = savedModel;
         selectedModel = savedModel;
         modelStatus.textContent = '已加载保存的模型选择';
+        modelStatus.classList.add('show');
         setTimeout(() => {
-            modelStatus.textContent = '';
+            modelStatus.classList.remove('show');
         }, 3000);
     }
     
@@ -185,8 +187,9 @@ function initButtons() {
             apiKey = newApiKey;
             apiKeyStatus.textContent = '已保存';
             apiKeyStatus.style.color = '#4caf50';
+            apiKeyStatus.classList.add('show');
             setTimeout(() => {
-                apiKeyStatus.textContent = '';
+                apiKeyStatus.classList.remove('show');
             }, 2000);
         }
     });
@@ -199,8 +202,9 @@ function initButtons() {
             selectedModel = newModel;
             modelStatus.textContent = '已保存';
             modelStatus.style.color = '#4caf50';
+            modelStatus.classList.add('show');
             setTimeout(() => {
-                modelStatus.textContent = '';
+                modelStatus.classList.remove('show');
             }, 2000);
         }
     });

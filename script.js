@@ -16,11 +16,7 @@ let shouldStopProcessing = false; // 是否应该停止处理
 let resultsHeight = localStorage.getItem('results_height') || '600';
 let batchSize = parseInt(localStorage.getItem('batch_size') || '1'); // 批量分析数量
 let currentTaskFolder = ''; // 当前任务文件夹名称
-let sessionId = ''; // 当前会话ID
-let lastSavedTime = 0; // 最后保存状态的时间戳
-let sessionSaving = false;
-let sessionRestored = false;
-let preventPageRefresh = false; // 是否阻止页面刷新
+let preventRefresh = false; // 是否阻止页面刷新
 
 // 费用计算相关变量
 let totalInputTokens = 0;
@@ -116,28 +112,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     initTheme();
     initResultsHeight();
-    
-    // 初始化会话恢复提示和会话状态指示器
-    initSessionElements();
-    
-    // 尝试恢复会话状态
-    try {
-        const hasSession = await checkSessionExists();
-        if (hasSession) {
-            showRestorePrompt();
-        } else {
-            console.log('没有找到可恢复的会话');
-        }
-    } catch (error) {
-        console.error('检查会话状态时出错:', error);
-    }
-    
-    // 每30秒保存一次会话状态（如果有上传的文件或分析结果）
-    setInterval(() => {
-        if (uploadedFiles.length > 0 || document.querySelectorAll('.result-item').length > 0) {
-            saveSessionState();
-        }
-    }, 30000);
+
+    // 添加页面刷新保护
+    initRefreshProtection();
 });
 
 /**
@@ -331,8 +308,10 @@ function handleFiles(e) {
     // 更新UI状态
     updateUI();
     
-    // 保存会话状态
-    saveSessionState();
+    // 如果有文件上传，启用页面刷新保护
+    if (files.length > 0) {
+        preventRefresh = true;
+    }
 }
 
 /**
@@ -423,9 +402,6 @@ function removeFile(filename) {
     
     // 更新UI状态
     updateUI();
-    
-    // 保存会话状态
-    saveSessionState();
 }
 
 /**
@@ -466,6 +442,9 @@ function clearAll() {
     // 显示会话指示器
     showSessionIndicator(false, '会话已清除');
     setTimeout(hideSessionIndicator, 3000);
+    
+    // 禁用页面刷新保护
+    preventRefresh = false;
 }
 
 /**
@@ -493,9 +472,9 @@ function stopAnalysis() {
     stopButton.disabled = true;
     stopButton.textContent = '正在停止...';
     
-    // 禁用页面刷新保护（延迟执行，确保所有任务都已停止）
+    // 延迟禁用页面刷新保护，确保所有任务都已停止
     setTimeout(() => {
-        disableRefreshProtection();
+        preventRefresh = false;
     }, 1000);
 }
 
@@ -509,7 +488,7 @@ async function startAnalysis() {
     }
     
     // 启用页面刷新保护
-    enableRefreshProtection();
+    preventRefresh = true;
     
     // 获取当前API密钥
     apiKey = apiKeyInput.value.trim();
@@ -562,9 +541,6 @@ async function startAnalysis() {
     // 创建滚动指示器
     createScrollIndicator();
     
-    // 保存初始会话状态
-    saveSessionState();
-    
     // 处理每个文件
     for (let i = 0; i < uploadedFiles.length; i += batchSize) {
         // 检查是否应该停止处理
@@ -610,9 +586,6 @@ async function startAnalysis() {
                 
                 // 显示结果
                 displayResult(file, base64Data, resultData.result);
-                
-                // 每处理完一个文件就保存会话状态
-                saveSessionState();
             } catch (error) {
                 console.error('处理文件时出错:', error);
                 
@@ -632,9 +605,6 @@ async function startAnalysis() {
                 
                 // 显示错误结果
                 displayError(file, error.message);
-                
-                // 每处理完一个文件就保存会话状态
-                saveSessionState();
             }
         });
         
@@ -672,17 +642,11 @@ async function startAnalysis() {
         }
     }
     
-    // 保存最终会话状态
-    saveSessionState();
-    
     // 重置处理状态
     setTimeout(() => {
         isProcessing = false;
         shouldStopProcessing = false;
         updateUI();
-        
-        // 禁用页面刷新保护
-        disableRefreshProtection();
     }, 1000);
 }
 
@@ -1509,289 +1473,6 @@ async function createTaskFolder(folderName) {
 }
 
 /**
- * 保存当前会话状态到localStorage
- */
-function saveSessionState() {
-    if (sessionSaving) return;
-    
-    try {
-        sessionSaving = true;
-        showSessionIndicator(true);
-        
-        // 收集上传的文件信息
-        const fileData = uploadedFiles.map(file => ({
-            id: file.id,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            base64: file.base64
-        }));
-        
-        // 收集分析结果信息
-        const resultItems = document.querySelectorAll('.result-item');
-        const resultData = Array.from(resultItems).map(item => {
-            const header = item.querySelector('.result-header');
-            const title = header ? header.querySelector('h3').textContent : '';
-            const content = item.querySelector('.result-content').textContent;
-            const imageElement = item.querySelector('.result-image img');
-            const imageSrc = imageElement ? imageElement.src : '';
-            
-            return {
-                title,
-                content,
-                imageSrc
-            };
-        });
-        
-        // 保存会话状态到本地存储
-        const sessionData = {
-            files: fileData,
-            results: resultData,
-            selectedModel,
-            timestamp: new Date().toISOString()
-        };
-        
-        localStorage.setItem('imageAnalysisSession', JSON.stringify(sessionData));
-        console.log('会话状态已保存');
-        
-        // 更新会话指示器
-        setTimeout(() => {
-            showSessionIndicator(false);
-            sessionSaving = false;
-        }, 1000);
-    } catch (error) {
-        console.error('保存会话状态时出错:', error);
-        sessionSaving = false;
-        hideSessionIndicator();
-    }
-}
-
-/**
- * 恢复会话状态
- * @returns {Promise<void>}
- */
-async function restoreSessionState() {
-    try {
-        const sessionDataString = localStorage.getItem('imageAnalysisSession');
-        if (!sessionDataString) {
-            console.log('没有找到可恢复的会话');
-            return;
-        }
-        
-        const sessionData = JSON.parse(sessionDataString);
-        console.log('正在恢复会话状态:', sessionData);
-        
-        // 恢复选择的模型
-        if (sessionData.selectedModel) {
-            selectedModel = sessionData.selectedModel;
-            const modelSelectElement = document.getElementById('modelSelect');
-            if (modelSelectElement) {
-                modelSelectElement.value = selectedModel;
-            }
-        }
-        
-        // 恢复上传的文件
-        if (sessionData.files && sessionData.files.length > 0) {
-            uploadedFiles = [];
-            clearPreviewList();
-            
-            for (const fileData of sessionData.files) {
-                const file = {
-                    id: fileData.id,
-                    name: fileData.name,
-                    size: fileData.size,
-                    type: fileData.type,
-                    base64: fileData.base64
-                };
-                
-                uploadedFiles.push(file);
-                displayPreview(file);
-            }
-            
-            updateImageCount();
-            
-            // 启用开始分析按钮
-            if (startButton && uploadedFiles.length > 0) {
-                startButton.disabled = false;
-            }
-            
-            // 启用清除所有按钮
-            if (clearAllButton && uploadedFiles.length > 0) {
-                clearAllButton.disabled = false;
-            }
-        }
-        
-        // 恢复分析结果
-        if (sessionData.results && sessionData.results.length > 0) {
-            // 清空现有结果数组
-            analysisResults = [];
-            
-            // 确保结果容器可见
-            const resultsContainer = document.querySelector('.results-container');
-            if (resultsContainer) {
-                resultsContainer.style.display = 'block';
-            }
-            
-            // 清除现有结果
-            const resultsList = document.getElementById('resultsList');
-            if (resultsList) {
-                resultsList.innerHTML = '';
-            }
-            
-            // 恢复结果
-            for (const resultData of sessionData.results) {
-                // 创建结果项
-                const resultItem = document.createElement('div');
-                resultItem.className = 'result-item';
-                
-                // 创建结果头部
-                const resultHeader = document.createElement('div');
-                resultHeader.className = 'result-header';
-                
-                // 添加图片
-                let imageSrc = '';
-                if (resultData.imageSrc) {
-                    const resultImage = document.createElement('div');
-                    resultImage.className = 'result-image';
-                    const img = document.createElement('img');
-                    img.src = resultData.imageSrc;
-                    imageSrc = resultData.imageSrc;
-                    resultImage.appendChild(img);
-                    resultHeader.appendChild(resultImage);
-                }
-                
-                // 添加标题
-                const title = document.createElement('h3');
-                title.textContent = resultData.title || '分析结果';
-                resultHeader.appendChild(title);
-                
-                // 添加状态图标
-                const statusIcon = document.createElement('div');
-                statusIcon.className = 'status-icon success';
-                resultHeader.appendChild(statusIcon);
-                
-                resultItem.appendChild(resultHeader);
-                
-                // 创建结果内容
-                const resultContent = document.createElement('div');
-                resultContent.className = 'result-content';
-                resultContent.textContent = resultData.content || '';
-                resultItem.appendChild(resultContent);
-                
-                // 添加到结果列表
-                if (resultsList) {
-                    resultsList.appendChild(resultItem);
-                }
-                
-                // 添加到分析结果数组
-                analysisResults.push({
-                    filename: resultData.title || '分析结果',
-                    result: resultData.content || '',
-                    base64: imageSrc,
-                    isError: false
-                });
-            }
-            
-            // 显示下载全部按钮
-            if (downloadAllContainer && analysisResults.length > 0) {
-                downloadAllContainer.style.display = 'block';
-            }
-        }
-        
-        sessionRestored = true;
-        console.log('会话状态已恢复');
-        
-        // 显示会话指示器
-        showSessionIndicator(false, '会话已恢复');
-        setTimeout(hideSessionIndicator, 3000);
-    } catch (error) {
-        console.error('恢复会话状态时出错:', error);
-    }
-}
-
-/**
- * 显示会话状态指示器
- * @param {boolean} saving - 是否正在保存
- * @param {string} text - 显示的文本
- */
-function showSessionIndicator(saving = false, text = null) {
-    if (!sessionIndicator) return;
-    
-    sessionIndicator.classList.add('visible');
-    
-    if (saving) {
-        sessionIndicatorDot.classList.add('saving');
-        sessionIndicatorText.textContent = '正在保存会话...';
-    } else {
-        sessionIndicatorDot.classList.remove('saving');
-        sessionIndicatorText.textContent = text || '会话已保存';
-    }
-}
-
-/**
- * 隐藏会话状态指示器
- */
-function hideSessionIndicator() {
-    if (!sessionIndicator) return;
-    sessionIndicator.classList.remove('visible');
-}
-
-/**
- * 初始化会话相关元素
- */
-function initSessionElements() {
-    restorePrompt = document.getElementById('restorePrompt');
-    discardSessionBtn = document.getElementById('discardSession');
-    restoreSessionBtn = document.getElementById('restoreSession');
-    sessionIndicator = document.getElementById('sessionIndicator');
-    sessionIndicatorDot = document.getElementById('sessionIndicatorDot');
-    sessionIndicatorText = document.getElementById('sessionIndicatorText');
-    
-    // 添加事件监听器
-    discardSessionBtn.addEventListener('click', () => {
-        hideRestorePrompt();
-        clearSessionStorage();
-    });
-    
-    restoreSessionBtn.addEventListener('click', async () => {
-        hideRestorePrompt();
-        await restoreSessionState();
-    });
-}
-
-/**
- * 显示会话恢复提示
- */
-function showRestorePrompt() {
-    if (restorePrompt) {
-        restorePrompt.style.display = 'flex';
-    }
-}
-
-/**
- * 隐藏会话恢复提示
- */
-function hideRestorePrompt() {
-    if (restorePrompt) {
-        restorePrompt.style.display = 'none';
-    }
-}
-
-/**
- * 检查是否存在可恢复的会话
- * @returns {Promise<boolean>} 是否存在可恢复的会话
- */
-async function checkSessionExists() {
-    try {
-        const sessionData = localStorage.getItem('imageAnalysisSession');
-        return !!sessionData;
-    } catch (error) {
-        console.error('检查会话存在时出错:', error);
-        return false;
-    }
-}
-
-/**
  * 清除会话存储
  */
 function clearSessionStorage() {
@@ -1884,107 +1565,65 @@ function createZipFileForServer() {
 }
 
 /**
- * 显示文件预览
- * @param {Object} file - 文件对象，包含base64数据
+ * 显示会话状态指示器
+ * @param {boolean} saving - 是否正在保存
+ * @param {string} text - 显示的文本
  */
-function displayPreview(file) {
-    if (!file || !file.base64) {
-        console.error('无法显示预览：文件或base64数据缺失');
-        return;
+function showSessionIndicator(saving = false, text = null) {
+    if (!sessionIndicator) return;
+    
+    sessionIndicator.classList.add('visible');
+    
+    if (saving) {
+        sessionIndicatorDot.classList.add('saving');
+        sessionIndicatorText.textContent = '正在保存会话...';
+    } else {
+        sessionIndicatorDot.classList.remove('saving');
+        sessionIndicatorText.textContent = text || '会话已保存';
     }
-    
-    const previewItem = document.createElement('div');
-    previewItem.className = 'preview-item';
-    previewItem.dataset.filename = file.name;
-    
-    const img = document.createElement('img');
-    img.src = file.base64;
-    img.alt = file.name;
-    img.loading = 'lazy'; // 懒加载图片
-    
-    const info = document.createElement('div');
-    info.className = 'preview-item-info';
-    
-    const name = document.createElement('div');
-    name.className = 'preview-item-name';
-    name.title = file.name; // 添加悬停提示
-    name.textContent = file.name;
-    
-    const size = document.createElement('div');
-    size.className = 'preview-item-size';
-    size.textContent = formatFileSize(file.size);
-    
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'preview-item-remove';
-    removeBtn.innerHTML = '&times;'; // 使用HTML实体，显示更好的删除图标
-    removeBtn.title = '移除图片';
-    removeBtn.setAttribute('aria-label', '移除图片'); // 增加无障碍支持
-    removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        removeFile(file.name);
-    });
-    
-    info.appendChild(name);
-    info.appendChild(size);
-    previewItem.appendChild(img);
-    previewItem.appendChild(info);
-    previewItem.appendChild(removeBtn);
-    
-    // 添加点击预览项的事件，可以展开/收起详情
-    previewItem.addEventListener('click', function(e) {
-        if (e.target === removeBtn || e.target === removeBtn.firstChild) return;
-        
-        // 在列表视图中，点击可以展开/收起详情
-        if (currentViewMode === 'list') {
-            this.classList.toggle('expanded');
-        }
-    });
-    
-    previewList.appendChild(previewItem);
-    
-    // 如果图片数量超过阈值，自动切换到列表视图
-    if (uploadedFiles.length >= AUTO_SWITCH_THRESHOLD && currentViewMode === 'grid') {
-        switchView('list');
-    }
+}
+
+/**
+ * 隐藏会话状态指示器
+ */
+function hideSessionIndicator() {
+    if (!sessionIndicator) return;
+    sessionIndicator.classList.remove('visible');
 }
 
 /**
  * 启用页面刷新保护
  */
 function enableRefreshProtection() {
-    preventPageRefresh = true;
-    
-    // 添加beforeunload事件监听器
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    // 显示提示
-    showSessionIndicator(false, '任务进行中，请勿刷新页面');
+    // 不再需要
 }
 
 /**
  * 禁用页面刷新保护
  */
 function disableRefreshProtection() {
-    preventPageRefresh = false;
-    
-    // 移除beforeunload事件监听器
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-    
-    // 显示提示
-    showSessionIndicator(false, '任务已完成，可以安全刷新');
-    setTimeout(hideSessionIndicator, 3000);
+    // 不再需要
 }
 
 /**
  * 处理页面刷新事件
- * @param {Event} e - 事件对象
- * @returns {string} 提示消息
  */
 function handleBeforeUnload(e) {
-    if (preventPageRefresh && isProcessing) {
-        // 显示标准的确认对话框
-        const confirmationMessage = '任务正在进行中，刷新页面将中断当前任务。确定要离开吗？';
-        e.returnValue = confirmationMessage; // 兼容Chrome、Firefox
-        return confirmationMessage; // 兼容旧版浏览器
-    }
+    // 不再需要
+}
+
+/**
+ * 初始化页面刷新保护
+ */
+function initRefreshProtection() {
+    window.addEventListener('beforeunload', function(e) {
+        if (preventRefresh) {
+            // 显示确认对话框
+            e.preventDefault();
+            // Chrome需要设置returnValue
+            const message = '当前有任务正在进行或有未保存的更改，刷新页面将丢失所有进度。确定要刷新吗？';
+            e.returnValue = message;
+            return message;
+        }
+    });
 } 

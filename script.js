@@ -561,9 +561,6 @@ async function startAnalysis() {
     // 保存初始会话状态
     saveSessionState();
     
-    // 存储失败的图片，用于后续重试
-    let failedFiles = [];
-    
     // 处理每个文件
     for (let i = 0; i < uploadedFiles.length; i += batchSize) {
         // 检查是否应该停止处理
@@ -618,11 +615,6 @@ async function startAnalysis() {
                 // 如果是因为停止处理而中断，不记录错误
                 if (shouldStopProcessing) return;
                 
-                // 检查是否是代理连接问题（443错误）
-                const isProxyError = error.message.includes('443') || 
-                                    error.message.includes('ProxyError') || 
-                                    error.message.includes('Unable to connect to proxy');
-                
                 // 保存错误结果
                 analysisResults.push({
                     filename: file.name,
@@ -631,18 +623,8 @@ async function startAnalysis() {
                     outputTokens: 0,
                     file: file,
                     index: fileIndex,
-                    isError: true,
-                    isProxyError: isProxyError // 标记是否为代理错误
+                    isError: true
                 });
-                
-                // 如果是代理错误，添加到失败列表中以便后续重试
-                if (isProxyError) {
-                    failedFiles.push({
-                        file: file,
-                        base64: base64Data,
-                        index: fileIndex
-                    });
-                }
                 
                 // 显示错误结果
                 displayError(file, error.message);
@@ -657,73 +639,6 @@ async function startAnalysis() {
         
         // 再次检查是否应该停止处理
         if (shouldStopProcessing) break;
-    }
-    
-    // 重试失败的图片（如果有且用户没有停止处理）
-    if (failedFiles.length > 0 && !shouldStopProcessing) {
-        progressText.textContent = `正在重试失败的图片: 0/${failedFiles.length}`;
-        
-        // 等待一段时间再重试，给网络一些恢复的时间
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        for (let i = 0; i < failedFiles.length; i++) {
-            // 检查是否应该停止处理
-            if (shouldStopProcessing) break;
-            
-            const { file, base64, index } = failedFiles[i];
-            
-            // 更新进度
-            progressText.textContent = `正在重试失败的图片: ${i+1}/${failedFiles.length}`;
-            
-            try {
-                // 调用API重试分析
-                const resultData = await analyzeImage(base64, file.type);
-                
-                // 查找并更新之前的错误结果
-                const resultIndex = analysisResults.findIndex(r => 
-                    r.filename === file.name && r.isError === true);
-                
-                if (resultIndex !== -1) {
-                    // 移除旧的错误结果
-                    analysisResults.splice(resultIndex, 1);
-                    
-                    // 添加新的成功结果
-                    analysisResults.push({
-                        filename: file.name,
-                        result: resultData.result,
-                        inputTokens: resultData.inputTokens,
-                        outputTokens: resultData.outputTokens,
-                        base64: base64,
-                        file: file,
-                        index: index,
-                        isError: false,
-                        wasRetried: true // 标记为重试成功
-                    });
-                    
-                    // 移除旧的错误结果项
-                    const errorItems = document.querySelectorAll('.result-item.error .result-item-title');
-                    let errorItem = null;
-                    errorItems.forEach(item => {
-                        if (item.textContent === file.name) {
-                            errorItem = item.closest('.result-item');
-                        }
-                    });
-                    if (errorItem) errorItem.remove();
-                    
-                    // 显示新的成功结果
-                    displayResult(file, base64, resultData.result);
-                    
-                    // 保存会话状态
-                    saveSessionState();
-                }
-            } catch (error) {
-                console.error('重试分析失败:', error);
-                // 重试失败，保持原有错误结果不变
-            }
-            
-            // 每次重试之间稍微暂停一下，避免连续请求
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
     }
     
     // 完成处理

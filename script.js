@@ -25,7 +25,7 @@ const modelRates = {
     'qwen-vl-max-latest': { input: 0.003, output: 0.009 },
     'qwen2.5-vl-7b-instruct': { input: 0.002, output: 0.005 },
     'qwen2.5-vl-72b-instruct': { input: 0.016, output: 0.048 },
-    'qvq-72b-preview': { input: 0.012, output: 0.036 },
+    'qvq-max': { input: 0.008, output: 0.032 },
     'qwen-vl-plus': { input: 0.0015, output: 0.0045 }
 };
 
